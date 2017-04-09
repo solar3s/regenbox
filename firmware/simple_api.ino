@@ -15,10 +15,11 @@
     0x51 charge mode
     0x52 discharge mode
 
-  output: read until CRLF
+  output: depends
 
 -----------------------------------------------------*/
 
+#define BOX_READY     0xFF     // send when box is ready
 
 #define PIN_CHARGE    4        // output pin (charge)
 #define PIN_DISCHARGE 3        // output pin (discharge)
@@ -67,18 +68,6 @@ unsigned long getVoltage() {
   return sum;
 }
 
-void setup() {
-  Serial.begin(9600);
-
-  pinMode(PIN_CHARGE, OUTPUT);
-  pinMode(PIN_DISCHARGE, OUTPUT);
-  pinMode(PIN_LED, OUTPUT);
-
-  setCharge(0);
-  setDischarge(0);
-  setLed(1);
-}
-
 // standard ok response
 boolean sendOk() {
   if (Serial.println(0) != 1) {
@@ -105,12 +94,32 @@ boolean sendUint(unsigned long v) {
   return true;
 }
 
+// sendReady sends special ready byte when setup() is over
+void sendReady() {
+	Serial.println(BOX_READY);
+}
+
 // boolean response
 boolean sendBool(boolean v) {
   if (Serial.println(v) <= 0) {
     return false;
   }
   return true;
+}
+
+void setup() {
+  Serial.begin(9600);
+
+  pinMode(PIN_CHARGE, OUTPUT);
+  pinMode(PIN_DISCHARGE, OUTPUT);
+  pinMode(PIN_LED, OUTPUT);
+
+  setCharge(0);
+  setDischarge(0);
+  setLed(1);
+
+	// notify we're good to go on serial
+  sendReady();
 }
 
 
