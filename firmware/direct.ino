@@ -105,6 +105,14 @@ boolean sendUint(unsigned long v) {
   return true;
 }
 
+// boolean response
+boolean sendBool(boolean v) {
+  if (Serial.println(v) <= 0) {
+    return false;
+  }
+  return true;
+}
+
 
 // simple talk protocol
 //   - input: 1 byte for instruction
@@ -125,6 +133,8 @@ void loop() {
       setLed(0); sendOk(); break;
     case 0x11:  // led on
       setLed(1); sendOk(); break;
+    case 0x12:  // led toggle
+      sendBool(toggleLed()); break;
 
     case 0x30:  // pin discharge off
       setDischarge(0); sendOk(); break;
