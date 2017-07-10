@@ -61,6 +61,11 @@ void loop() {
               if( (cycle == 2 ) || (cycle == 1)){
                 if((currentMillis - last_mesure)  > 60000){ //Permet d'envoyer sur le serial tout les minutes la tension de la pile
                   etat = 1;
+                  digitalWrite(pin_charge, HIGH);
+                  digitalWrite(pin_decharge, HIGH);
+                  delay(5000);
+                  digitalWrite(pin_charge, LOW);
+                  digitalWrite(pin_decharge, LOW);
                 }
               }
               break;
