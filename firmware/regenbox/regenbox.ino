@@ -78,8 +78,6 @@ void setup() {
   digitalWrite(13, LOW);
 
   setRegenBoxMode(RBX_CHARGE);
-  //digitalWrite(CHARGE_PIN, LOW);      //activation de la charge
-  //digitalWrite(CHARGE_PIN, LOW);    //desactivation de la decharge
 }
 
 void loop() {
@@ -98,8 +96,6 @@ void loop() {
       Serial.println("                          5 : Lancement Decharge profonde (jusqu'a la mort de la pile);");
       Serial.println("");
       setRegenBoxMode(RBX_IDLE);
-      //digitalWrite(pin_charge, 1);        //desactivation de la charge
-      //digitalWrite(pin_decharge, 0);        //desactivation de la decharge
     }
    }else{
       currentMillis = millis();
@@ -112,12 +108,8 @@ void loop() {
                   etat = 1;
                   
                   setRegenBoxMode(RBX_DECHARGE);
-                  //digitalWrite(pin_charge, HIGH);
-                  //digitalWrite(pin_decharge, HIGH);
                   delay(5000);
                   setRegenBoxMode(RBX_CHARGE);
-                  //digitalWrite(pin_charge, LOW);
-                  //digitalWrite(pin_decharge, LOW);
                 }
               }
               break;
@@ -128,14 +120,10 @@ void loop() {
               
               if(voltage_mesure < 688){ //Pile avec une tension inférieur à 700mV, on interdit les cycles de charge/decharge
                 setRegenBoxMode(RBX_IDLE);
-               // digitalWrite(pin_decharge, LOW);          //desactivation de la decharge
-               // digitalWrite(pin_charge, HIGH);           //desactivation de la charge
 		Serial.println("Mort de la pile en cours de cycle!");
               }else{
                 if((voltage_mesure < 900) && (cycle == 2)){ // 374 correspond à 0,9V avec un VREF à 2,5V
                   setRegenBoxMode(RBX_CHARGE);
-                  //digitalWrite(pin_decharge, LOW);          //desactivation de la decharge
-                  //digitalWrite(pin_charge, LOW);           //activation de la charge
                   cycle = 1;
                   heure = 0;
                   Serial.println("Cycle de charge");
@@ -150,8 +138,6 @@ void loop() {
                     if(voltage_mesure > 1400){ // 1,45V
   				            nb_cycle++;
                       setRegenBoxMode(RBX_DECHARGE);
-                      //digitalWrite(pin_decharge, HIGH); //activation de la decharge
-                      //digitalWrite(pin_charge, HIGH); //desactivation de la charge
                       cycle = 2;
                     }else{
   					          nb_cycle++;  
@@ -186,14 +172,10 @@ void loop() {
            case 4:
               //charge des 4 piles sans remontée de donnée
               setRegenBoxMode(RBX_CHARGE);
-              //digitalWrite(pin_decharge, 0); //desactivation de la decharge
-              //digitalWrite(pin_charge, 0); //activation de la charge
               break;
            case 5:
               //Decharge profonde (jusqu'a la mort de la pile)
               setRegenBoxMode(RBX_DECHARGE);
-              //digitalWrite(pin_decharge, HIGH); //activation de la decharge
-              //digitalWrite(pin_charge, HIGH);   //desactivation de la charge
               break;
       }
       
@@ -206,20 +188,14 @@ void loop() {
               Serial.println("Cycle de decharge");
               nb_cycle = 0;
               setRegenBoxMode(RBX_DECHARGE);
-              //digitalWrite(pin_decharge, HIGH); //activation de la decharge
-              //digitalWrite(pin_charge, HIGH); //desactivation de la charge
           }else if(tamp == '2'){
               etat = 2;
               setRegenBoxMode(RBX_IDLE);
-              //digitalWrite(pin_decharge, LOW); //desactivation de la decharge
-              //digitalWrite(pin_charge, HIGH); //desactivation de la charge
           }else if(tamp == '3'){
               etat = 1;
               cycle = 2;
               nb_cycle = 0;
               setRegenBoxMode(RBX_CHARGE);
-              //digitalWrite(pin_decharge, LOW); //desactivation de la decharge
-              //digitalWrite(pin_charge, LOW); //activation de la charge
               Serial.println("Cycle de charge");
           }else if(tamp == '4'){
               etat = 4;
