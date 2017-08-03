@@ -1,12 +1,17 @@
 //Regenbox V1: mesure de tension et renvoi sur le serial selon les commandes serial
 
-#define VOLTAGE_REF         2410      // tension de reference, tension sur la pin AREF exprimée en mV
-#define CHARGE_PIN             4      // Identification de la pin de commande de la charge
-#define DECHARGE_PIN           3      // Identification de la pin de commande de la décharge
-#define SENSOR_PIN            A0      // Identification de la pin de mesure de tension pile
-#define ONE_HOUR         3600000      // nombre de milli-seconde dans une heure
-#define NB_ANALOG_RD         204      // nombre de lecture de la tension
-#define CAN_RESOLUTION      1023      // resolution du convertisseur analogique numérique 10 bit
+#define VOLTAGE_REF            2410      // tension de reference, tension sur la pin AREF exprimée en mV
+#define CHARGE_PIN                4      // Identification de la pin de commande de la charge
+#define DECHARGE_PIN              3      // Identification de la pin de commande de la décharge
+#define SENSOR_PIN_1             A0      // Identification de la pin de mesure de tension pile 1
+#define SENSOR_PIN_2             A1      // Identification de la pin de mesure de tension pile 2
+#define SENSOR_PIN_3             A2      // Identification de la pin de mesure de tension pile 3
+#define SENSOR_PIN_4             A3      // Identification de la pin de mesure de tension pile 4
+#define ONE_HOUR            3600000      // nombre de milli-secondes dans une heure
+#define ONE_MINUTE            60000      // nombre de milli-secondes dans une minute
+#define TWENTY_FOUR_HOURS  86400000      // nombre de milli-secondes dans 24 heures
+#define NB_ANALOG_RD            204      // nombre de lecture de la tension
+#define CAN_RESOLUTION         1023      // resolution du convertisseur analogique numérique 10 bit
 
 enum RBX_STATUS {
   RBX_STATUS_IDLE     = 0,
@@ -18,6 +23,7 @@ enum RBX_MODE {
   RBX_MODE_IDLE            = 0,
   RBX_MODE_DECHARGE_CHARGE = 1,
   RBX_MODE_REPORT_VOLTAGE  = 2,
+  RBX_MODE_CHARGE_DECHARGE = 3,
   RBX_MODE_CHARGE          = 4,
   RBX_MODE_DEEP_DECHARGE   = 5
 };
@@ -25,11 +31,10 @@ enum RBX_MODE {
 RBX_STATUS gStatus = RBX_STATUS_CHARGE;
 RBX_MODE gMode = RBX_MODE_IDLE;
 
-byte etat = 0;                  // 0: pas de mesure/pas de remontée de donnée/attente ; 1: demarrage de cycle decharge/charge; 2: fonction voltmètre
 byte last_etat = 0;
 byte CMD_1 = 0;                 //commande transistor de charge
 byte CMD_2 = 0;                 //commande transistor de decharge
-byte cycle = 0;                 // 1: charge ; 2: decharge
+//byte cycle = 0;                 // 1: charge ; 2: decharge
 byte nb_cycle = 0;              //compteur du nombre de cycle de charge/decharge
 byte heure = 0;
 unsigned long voltage_mesure;   //tension mesure sur la pin SensorPin
@@ -49,10 +54,10 @@ unsigned long currentMillis = 0;
 // de charge, on peut donc espérer avoir une mesure de la tension
 // à peu prêt constante
 //-----------------------------------------------------------------------------
-unsigned long getVoltage() {
-    unsigned long voltage_mesure = analogRead(SENSOR_PIN);
+unsigned long getVoltage(byte sensor_pin) {
+    unsigned long voltage_mesure = analogRead(sensor_pin);
     for (byte i = 0; i < NB_ANALOG_RD; i++) {
-      voltage_mesure = voltage_mesure + analogRead(SENSOR_PIN);
+      voltage_mesure = voltage_mesure + analogRead(sensor_pin);
       delay(1);
     }
     voltage_mesure = voltage_mesure / NB_ANALOG_RD;
@@ -65,8 +70,17 @@ unsigned long getVoltage() {
 // Envoie de la tension sur le port serie
 //-----------------------------------------------------------------------------
 void reportVoltage() {
-  voltage_mesure = getVoltage();
-  //Serial.print("Tension pile emplacement 1 : "); 
+  voltage_mesure = getVoltage(SENSOR_PIN_1);
+  Serial.print("Tension pile emplacement 1 : "); 
+  Serial.println(voltage_mesure);
+  voltage_mesure = getVoltage(SENSOR_PIN_2);
+  Serial.print("Tension pile emplacement 2 : "); 
+  Serial.println(voltage_mesure);
+  voltage_mesure = getVoltage(SENSOR_PIN_3);
+  Serial.print("Tension pile emplacement 3 : "); 
+  Serial.println(voltage_mesure);
+  voltage_mesure = getVoltage(SENSOR_PIN_4);
+  Serial.print("Tension pile emplacement 4 : "); 
   Serial.println(voltage_mesure);
   //Serial.println("mV;");
 }
@@ -81,7 +95,7 @@ void setRegenBoxStatus(RBX_STATUS status) {
   
   gStatus = status;
   if (status == RBX_STATUS_CHARGE) {
-    digitalWrite(CHARGE_PIN,   LOW);    // activation de la charge
+    digitalWrite(CHARGE_PIN,   LOW);    // activation de la chargeat
     digitalWrite(DECHARGE_PIN, LOW);    // desactivation de la decharge
   }
   else if (status == RBX_STATUS_DECHARGE) {
@@ -173,54 +187,50 @@ void loop() {
           case RBX_MODE_REPORT_VOLTAGE:
               setRegenBoxStatus(RBX_STATUS_IDLE);
               reportVoltage();
-              delay(500);
+              delay(ONE_MINUTE);
+              break;
+           
+           case RBX_MODE_CHARGE_DECHARGE:
+              reportVoltage();              
               break;
            
            case RBX_MODE_CHARGE:
-              //charge des 4 piles sans remontée de donnée
               setRegenBoxStatus(RBX_STATUS_CHARGE);
+              Serial.print("Time: ");
+              Serial.println(currentMillis);
+              //Serial.print(", ");
               reportVoltage();
-              delay(500);
+              delay(ONE_MINUTE);
               break;
               
            case RBX_MODE_DEEP_DECHARGE:
               //Decharge profonde (jusqu'a la mort de la pile)
               setRegenBoxStatus(RBX_STATUS_DECHARGE);
               reportVoltage();
-              delay(500);
+              delay(ONE_MINUTE);
               break;
       }
       
       if(Serial.available()){
           byte tamp = Serial.read();
-          //Serial.print(etat);
-          if(tamp == '1'){
-              etat = 1;
-              cycle = 2;
+          if (tamp == '1') {
               Serial.println("Cycle de decharge");
               nb_cycle = 0;
               setRegenBoxStatus(RBX_STATUS_DECHARGE);
           }
-          else if(tamp == '2'){
-              etat = RBX_MODE_REPORT_VOLTAGE;
+          else if (tamp == '2') {
               setRegenBoxMode(RBX_MODE_REPORT_VOLTAGE);
-              setRegenBoxStatus(RBX_STATUS_IDLE);
           }
-          else if(tamp == '3'){
-              etat = 1;
-              cycle = 2;
+          else if (tamp == '3') {
               nb_cycle = 0;
-              setRegenBoxStatus(RBX_STATUS_CHARGE);
+              setRegenBoxMode(RBX_MODE_CHARGE_DECHARGE);
               Serial.println("Cycle de charge");
           }
-          else if(tamp == '4'){
+          else if (tamp == '4') {
               setRegenBoxMode(RBX_MODE_CHARGE);
-              cycle = 0;
           }
-          else if(tamp == '5'){
+          else if (tamp == '5') {
               setRegenBoxMode(RBX_MODE_DEEP_DECHARGE);
-              //etat = 5;
-              cycle = 0;
           }
           while(Serial.available()){
               tamp = Serial.read();
