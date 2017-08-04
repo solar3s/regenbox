@@ -31,17 +31,12 @@ enum RBX_MODE {
 RBX_STATUS gStatus = RBX_STATUS_CHARGE;
 RBX_MODE gMode = RBX_MODE_IDLE;
 
-byte CMD_1 = 0;                 //commande transistor de charge
-byte CMD_2 = 0;                 //commande transistor de decharge
-byte nb_cycle = 0;              //compteur du nombre de cycle de charge/decharge
+byte gNb_cycle = 0;              //compteur du nombre de cycle de charge/decharge
 byte heure = 0;
 unsigned long voltage_mesure;   //tension mesure sur la pin SensorPin
 boolean terminal_actif = false; // True: arduino en connexion avec le PC, FALSE: arduino non connecté avec le PC(exemple sur alim secteur)
-byte etat_init = 0;             //Back up etat (pour Decharge pure)
 
-unsigned long last_mesure;
 unsigned long previousMillis = 0;
-unsigned long currentMillis = 0;
 
 //-----------------------------------------------------------------------------
 //--------- Mesure de la tension dans l'emplacement 1 
@@ -110,11 +105,32 @@ void setRegenBoxStatus(RBX_STATUS status) {
 //-------------------------------------------------------------
 void setRegenBoxMode(RBX_MODE mode) {
     gMode = mode;
+    previousMillis = millis();
     switch(gMode) {
+        case RBX_MODE_DECHARGE_CHARGE:
+            gNb_cycle = 0;
+            setRegenBoxStatus(RBX_STATUS_DECHARGE); // initialisation
+            Serial.println("Debut du cycle de decharge/charge");
+            reportVoltage();
+            break;
+        case RBX_MODE_CHARGE_DECHARGE:
+            gNb_cycle = 0;
+            setRegenBoxStatus(RBX_STATUS_CHARGE); // initial state
+            Serial.println("Debut du cycle de charge/decharge");
+            reportVoltage();
+            break;
+        case RBX_MODE_REPORT_VOLTAGE:
+            setRegenBoxStatus(RBX_STATUS_IDLE);
+            Serial.println("Cycle de lecture de la tension");
+            reportVoltage();
+            break;    
         case RBX_MODE_CHARGE:
             setRegenBoxStatus(RBX_STATUS_CHARGE);
             Serial.println("Debut du cycle de charge");
             reportVoltage();
+            break;
+        case RBX_MODE_IDLE:
+            setRegenBoxStatus(RBX_STATUS_IDLE);
             break;
     }
 }
@@ -132,7 +148,6 @@ void setup() {
 }
 
 void loop() {
-    //Serial.println("Begin loop");
     if (terminal_actif == false) {
         if(Serial.available()) {
             Serial.read();
@@ -151,13 +166,17 @@ void loop() {
         }
     }
     else {
-        currentMillis = millis();
+        unsigned long currentMillis = millis();
         switch(gMode) {
             case RBX_MODE_DECHARGE_CHARGE:
-                reportVoltage();
+            case RBX_MODE_CHARGE_DECHARGE:
+                if ((currentMillis - previousMillis) > ONE_MINUTE) {
+                    reportVoltage();
+                    previousMillis = currentMillis;
+                }
 
+                voltage_mesure = getVoltage(SENSOR_PIN_1);
                 if (voltage_mesure < 688) { //Pile avec une tension inférieur à 700mV, on interdit les cycles de charge/decharge
-                    setRegenBoxStatus(RBX_STATUS_IDLE);
                     setRegenBoxMode(RBX_MODE_IDLE);
 		                Serial.println("Mort de la pile en cours de cycle!");
                 }
@@ -167,8 +186,6 @@ void loop() {
                     Serial.println("Cycle de charge");
                 }
                
-                last_mesure = currentMillis;
-               
                 if (gStatus == RBX_STATUS_CHARGE) {           
                     if ((currentMillis - previousMillis) >= ONE_HOUR) {
                         heure++;
@@ -176,14 +193,14 @@ void loop() {
                     }
                     if (heure > 23) { //Si charge de plus de 24h
                         if (voltage_mesure > 1400) { // 1,45V
-  				                  nb_cycle++;
+  				                  gNb_cycle++;
                             setRegenBoxStatus(RBX_STATUS_DECHARGE);
                         }
                         else {
-  					                nb_cycle++;  
+  					                gNb_cycle++;  
                             Serial.println("Arret des cycle decharge/charge");
-                            Serial.println(nb_cycle);
-                            setRegenBoxStatus(RBX_STATUS_IDLE);
+                            Serial.println(gNb_cycle);
+                            setRegenBoxMode(RBX_MODE_IDLE);
                         }
                         heure = 0;
                     }
@@ -191,15 +208,6 @@ void loop() {
                 break;
             
             case RBX_MODE_REPORT_VOLTAGE:
-                if ((currentMillis - previousMillis) > ONE_MINUTE) {
-                    setRegenBoxStatus(RBX_STATUS_IDLE);
-                    reportVoltage();
-                    //delay(ONE_MINUTE);
-                    previousMillis = currentMillis;
-                }
-                break;
-           
-            case RBX_MODE_CHARGE_DECHARGE:
                 if ((currentMillis - previousMillis) > ONE_MINUTE) {
                     reportVoltage();
                     previousMillis = currentMillis;
@@ -211,10 +219,9 @@ void loop() {
                    //setRegenBoxStatus(RBX_STATUS_CHARGE);
                    Serial.print("Time: ");
                    Serial.println(currentMillis);
-                   //Serial.print(", ");
                    reportVoltage();
-                   //delay(ONE_MINUTE);
                    previousMillis = currentMillis;
+                   // TODO : Define the strategy to stop charge !
                }
                break;
               
@@ -223,11 +230,11 @@ void loop() {
                     //Decharge profonde (jusqu'a la mort de la pile)
                     setRegenBoxStatus(RBX_STATUS_DECHARGE);
                     reportVoltage();
-                    //delay(ONE_MINUTE);
                     previousMillis = currentMillis;
+                    // TODO : Define the strategy to stop the decharge
                 }
                 break;
-                
+              
             default:
                break;
         }
@@ -236,14 +243,12 @@ void loop() {
             byte tamp = Serial.read();
             if (tamp == '1') {
                 Serial.println("Cycle de decharge");
-                nb_cycle = 0;
-                setRegenBoxStatus(RBX_STATUS_DECHARGE);
+                setRegenBoxMode(RBX_MODE_DECHARGE_CHARGE);
             }
             else if (tamp == '2') {
                 setRegenBoxMode(RBX_MODE_REPORT_VOLTAGE);
             }
             else if (tamp == '3') {
-                nb_cycle = 0;
                 setRegenBoxMode(RBX_MODE_CHARGE_DECHARGE);
                 Serial.println("Cycle de charge");
             }
@@ -253,13 +258,6 @@ void loop() {
             else if (tamp == '5') {
                 setRegenBoxMode(RBX_MODE_DEEP_DECHARGE);
             }
-           // while (Serial.available()) {
-           //     tamp = Serial.read();
-            //}
         }
     }
-    //delay(200);
-    //Serial.print("gMode : ");
-    //Serial.println(gMode);
-    //Serial.println("End loop");
 }
