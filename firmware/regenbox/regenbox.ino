@@ -12,6 +12,8 @@
 #define TWENTY_FOUR_HOURS  86400000      // nombre de milli-secondes dans 24 heures
 #define NB_ANALOG_RD            204      // nombre de lecture de la tension
 #define CAN_RESOLUTION         1023      // resolution du convertisseur analogique numérique 10 bit
+#define OFFICIAL_TEST
+//#define MULTIPLE_SENSORS
 
 enum RBX_STATUS {
     RBX_STATUS_IDLE     = 0,
@@ -62,8 +64,11 @@ unsigned long getVoltage(byte sensor_pin) {
 //-----------------------------------------------------------------------------
 void reportVoltage() {
     unsigned long voltage_mesure = getVoltage(SENSOR_PIN_1);
-    Serial.print("Tension pile emplacement 1 : "); 
+#ifndef OFFICIAL_TEST
+    Serial.print("Tension pile emplacement 1 : ");
+#endif 
     Serial.println(voltage_mesure);
+#ifdef MULTIPLE_SENSORS
     voltage_mesure = getVoltage(SENSOR_PIN_2);
     Serial.print("Tension pile emplacement 2 : "); 
     Serial.println(voltage_mesure);
@@ -74,6 +79,7 @@ void reportVoltage() {
     Serial.print("Tension pile emplacement 4 : "); 
     Serial.println(voltage_mesure);
     //Serial.println("mV;");
+#endif // MULTIPLE_SENSOR
 }
 
 //----------------------------------------------------------
@@ -189,6 +195,10 @@ void loop() {
                     if ((currentMillis - gPreviousMillis) >= ONE_HOUR) {
                         gHeure++;
                         gPreviousMillis = currentMillis;
+                    }
+                    if (voltage_mesure > 1500) {
+                        Serial.println("Cycle de decharge");
+                        setRegenBoxStatus(RBX_STATUS_DECHARGE);
                     }
                     if (gHeure > 23) { //Si charge de plus de 24h
                         if (voltage_mesure > 1400) { // 1,45V
