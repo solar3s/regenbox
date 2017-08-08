@@ -140,6 +140,7 @@ void setRegenBoxMode(RBX_MODE mode) {
     case RBX_MODE_DEEP_DECHARGE:
       setRegenBoxStatus(RBX_STATUS_DECHARGE);
       Serial.println("Debut de la decharge profonde");
+      reportVoltage();
       break;
     case RBX_MODE_IDLE:
       setRegenBoxStatus(RBX_STATUS_IDLE);
