@@ -1,4 +1,4 @@
-//Regenbox V1: mesure de tension et renvoi sur le serial selon les commandes serial
+//Regenbox V1.1: mesure de tension et renvoi sur le serial selon les commandes serial
 
 #define VOLTAGE_REF            2410      // tension de reference, tension sur la pin AREF exprimée en mV
 #define CHARGE_PIN                4      // Identification de la pin de commande de la charge
@@ -107,6 +107,7 @@ void setRegenBoxStatus(RBX_STATUS status) {
     digitalWrite(DECHARGE_PIN, LOW);    // desactivation de la decharge
   }
 }
+
 //-------------------------------------------------------------
 //--- Sélection du mode de fonctionnement de la RegenBox
 //-------------------------------------------------------------
@@ -136,12 +137,19 @@ void setRegenBoxMode(RBX_MODE mode) {
       Serial.println("Debut du cycle de charge");
       reportVoltage();
       break;
+    case RBX_MODE_DEEP_DECHARGE:
+      setRegenBoxStatus(RBX_STATUS_DECHARGE);
+      Serial.println("Debut de la decharge profonde");
+      break;
     case RBX_MODE_IDLE:
       setRegenBoxStatus(RBX_STATUS_IDLE);
       break;
   }
 }
 
+//-----------------------------------------------------------------------------
+//- Affichage de la documentation
+//-----------------------------------------------------------------------------
 void usage() {
   if (Serial.available()) {
     Serial.read();
@@ -159,6 +167,9 @@ void usage() {
   }
 }
 
+//-----------------------------------------------------------------------------
+//- Boucle en mode charge Decharge
+//-----------------------------------------------------------------------------
 void modeChargeDecharge() {
   unsigned long currentMillis = millis();
   if ((currentMillis - gPreviousMillis) >= ONE_MINUTE) {
@@ -202,6 +213,9 @@ void modeChargeDecharge() {
   }
 }
 
+//-----------------------------------------------------------------------------
+//- Boucle en mode voltmetre
+//-----------------------------------------------------------------------------
 void modeReportVoltage() {
   unsigned long currentMillis = millis();
   if ((currentMillis - gPreviousMillis) >= ONE_MINUTE) {
@@ -210,6 +224,9 @@ void modeReportVoltage() {
   }
 }
 
+//-----------------------------------------------------------------------------
+//- Boucle en mode de charge
+//-----------------------------------------------------------------------------
 void modeCharge() {
   unsigned long currentMillis = millis();
   if ((currentMillis - gPreviousMillis) >= ONE_MINUTE) {
@@ -222,11 +239,12 @@ void modeCharge() {
   }
 }
 
+//-----------------------------------------------------------------------------
+//- Boucle en mode de decharge profonde
+//-----------------------------------------------------------------------------
 void modeDeepDecharge() {
   unsigned long currentMillis = millis();
   if ((currentMillis - gPreviousMillis) >= ONE_MINUTE) {
-    //Decharge profonde (jusqu'a la mort de la pile)
-    setRegenBoxStatus(RBX_STATUS_DECHARGE);
     reportVoltage();
     gPreviousMillis = currentMillis;
     unsigned long voltage_mesure = getVoltage(SENSOR_PIN_1);
@@ -237,6 +255,9 @@ void modeDeepDecharge() {
   }
 }
 
+//-----------------------------------------------------------------------------
+//- Leture de la commande du mode de fonctionnement de la regenbox
+//-----------------------------------------------------------------------------
 void readInput() {
   if (Serial.available()){
     byte tamp = Serial.read();
@@ -256,9 +277,16 @@ void readInput() {
     else if (tamp == '5') {
        setRegenBoxMode(RBX_MODE_DEEP_DECHARGE);
     }
+    else {
+      Serial.println("Commande inconnue");
+      usage();
+    }
   }
 }
 
+//-----------------------------------------------------------------------------
+//- Initialisation du sketch
+//-----------------------------------------------------------------------------
 void setup() {
     Serial.begin(9600);
     analogReference(EXTERNAL);          // reference de tension pour les mesures
@@ -271,28 +299,31 @@ void setup() {
     setRegenBoxStatus(RBX_STATUS_IDLE);
 }
 
+//-----------------------------------------------------------------------------
+//- Boucle de fonctionnement de la regenbox
+//-----------------------------------------------------------------------------
 void loop() {
     if (gTerminal_actif == false) {
-        usage();
+      usage();
     }
     else {
-        switch(gMode) {
-            case RBX_MODE_DECHARGE_CHARGE:
-            case RBX_MODE_CHARGE_DECHARGE:
-                modeChargeDecharge();
-                break;
+      switch(gMode) {
+        case RBX_MODE_DECHARGE_CHARGE:
+        case RBX_MODE_CHARGE_DECHARGE:
+          modeChargeDecharge();
+          break;
             
-            case RBX_MODE_REPORT_VOLTAGE:
-                modeReportVoltage();
-                break;
+        case RBX_MODE_REPORT_VOLTAGE:
+           modeReportVoltage();
+           break;
            
-           case RBX_MODE_CHARGE:
-               modeCharge();
-               break;
+        case RBX_MODE_CHARGE:
+            modeCharge();
+            break;
               
-           case RBX_MODE_DEEP_DECHARGE:
-                modeDeepDecharge();
-                break;
+        case RBX_MODE_DEEP_DECHARGE:
+            modeDeepDecharge();
+            break;
         }
         readInput();
     }
