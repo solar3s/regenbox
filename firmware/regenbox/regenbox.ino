@@ -231,9 +231,6 @@ void modeReportVoltage() {
 void modeCharge() {
   unsigned long currentMillis = millis();
   if ((currentMillis - gPreviousMillis) >= ONE_MINUTE) {
-   //setRegenBoxStatus(RBX_STATUS_CHARGE);
-   Serial.print("Time: ");
-   Serial.println(currentMillis);
    reportVoltage();
    gPreviousMillis = currentMillis;
    // TODO : Define the strategy to stop charge !
@@ -263,7 +260,6 @@ void readInput() {
   if (Serial.available()){
     byte tamp = Serial.read();
     if (tamp == '1') {
-      Serial.println("Cycle de decharge");
       setRegenBoxMode(RBX_MODE_DECHARGE_CHARGE);
     }
     else if (tamp == '2') {

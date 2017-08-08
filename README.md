@@ -8,4 +8,5 @@ firmware/regenbox/regenbox.ino:
   Use Serial monitor or any other serial terminal to send command and retrieve datas.
   Minicom usage : minicom -D /dev/ttyUSB0 -b 9600 -C test.log
   With minicom, you can directly save the measurements in a file using the -C option.
+  To leave minicom press CTRL + A and x
 
