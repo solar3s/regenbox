@@ -66,30 +66,6 @@ unsigned long getVoltage(byte sensor_pin) {
 }
 
 //-----------------------------------------------------------------------------
-// Envoie de la tension sur le port serie
-//-----------------------------------------------------------------------------
-void reportVoltage() {
-  unsigned long voltage_mesure = getVoltage(SENSOR_PIN_1);
-  gVoltageHist[gHistIndex % VOLTAGE_HISTORY_NUM] = voltage_mesure;
-#ifndef OFFICIAL_TEST
-  Serial.print("Tension pile emplacement 1 : ");
-#endif 
-  Serial.println(voltage_mesure);
-#ifdef MULTIPLE_SENSORS
-  voltage_mesure = getVoltage(SENSOR_PIN_2);
-  Serial.print("Tension pile emplacement 2 : "); 
-  Serial.println(voltage_mesure);
-  voltage_mesure = getVoltage(SENSOR_PIN_3);
-  Serial.print("Tension pile emplacement 3 : "); 
-  Serial.println(voltage_mesure);
-  voltage_mesure = getVoltage(SENSOR_PIN_4);
-  Serial.print("Tension pile emplacement 4 : "); 
-  Serial.println(voltage_mesure);
-  //Serial.println("mV;");
-#endif // MULTIPLE_SENSOR
-}
-
-//-----------------------------------------------------------------------------
 //- Initialisation de l'historique des mesures de tension
 //-----------------------------------------------------------------------------
 void initVoltageHist() {
@@ -104,6 +80,43 @@ void initVoltageHist() {
     }
   }
   gHistIndex = 0;
+}
+
+unsigned long computeAvgVoltage() {
+  unsigned long avgVoltage = 0;
+  for (byte i = 0; i < VOLTAGE_HISTORY_NUM; i++) {
+    avgVoltage += gVoltageHist[i];
+  }
+
+  avgVoltage = floor(avgVoltage / VOLTAGE_HISTORY_NUM);
+  return avgVoltage;
+}
+
+//-----------------------------------------------------------------------------
+// Envoie de la tension sur le port serie
+//-----------------------------------------------------------------------------
+void reportVoltage() {
+  unsigned long voltage_mesure = getVoltage(SENSOR_PIN_1);
+  gVoltageHist[gHistIndex % VOLTAGE_HISTORY_NUM] = voltage_mesure;
+#ifndef OFFICIAL_TEST
+  Serial.print("Tension pile emplacement 1 : ");
+#endif 
+  Serial.println(voltage_mesure);
+  Serial.print("Avg : ");
+  unsigned long avgV = computeAvgVoltage();
+  Serial.println(avgV);
+#ifdef MULTIPLE_SENSORS
+  voltage_mesure = getVoltage(SENSOR_PIN_2);
+  Serial.print("Tension pile emplacement 2 : "); 
+  Serial.println(voltage_mesure);
+  voltage_mesure = getVoltage(SENSOR_PIN_3);
+  Serial.print("Tension pile emplacement 3 : "); 
+  Serial.println(voltage_mesure);
+  voltage_mesure = getVoltage(SENSOR_PIN_4);
+  Serial.print("Tension pile emplacement 4 : "); 
+  Serial.println(voltage_mesure);
+  //Serial.println("mV;");
+#endif // MULTIPLE_SENSOR
 }
 
 //----------------------------------------------------------
@@ -199,12 +212,12 @@ void modeChargeDecharge() {
       gPreviousMillis = currentMillis;
   }
   
-  unsigned long voltage_mesure = getVoltage(SENSOR_PIN_1);
-  if (voltage_mesure < DEAD_THRESHOLD) { //Pile avec une tension inférieur à 700mV, on interdit les cycles de charge/decharge
+  unsigned long avg_voltage = computeAvgVoltage();
+  if (avg_voltage < DEAD_THRESHOLD) { //Pile avec une tension inférieur à 700mV, on interdit les cycles de charge/decharge
     setRegenBoxMode(RBX_MODE_IDLE);
     Serial.println("Mort de la pile en cours de cycle!");
   }
-  else if ((voltage_mesure < DECHARGE_THRESHOLD) && (gStatus == RBX_STATUS_DECHARGE)) {
+  else if ((avg_voltage < DECHARGE_THRESHOLD) && (gStatus == RBX_STATUS_DECHARGE)) {
     setRegenBoxStatus(RBX_STATUS_CHARGE);
     gHeure = 0;
     Serial.println("Cycle de charge");
@@ -215,12 +228,12 @@ void modeChargeDecharge() {
       gHeure++;
       gPreviousMillis = currentMillis;
     }
-    if (voltage_mesure > CHARGE_THRESHOLD) {
+    if (avg_voltage > CHARGE_THRESHOLD) {
       Serial.println("Cycle de decharge");
       setRegenBoxStatus(RBX_STATUS_DECHARGE);
     }
     if (gHeure > 23) { //Si charge de plus de 24h
-      if (voltage_mesure > 1400) { // 1,45V
+      if (avg_voltage > 1400) { // 1,45V
         gNb_cycle++;
         setRegenBoxStatus(RBX_STATUS_DECHARGE);
       }
@@ -269,8 +282,8 @@ void modeDeepDecharge() {
   if ((currentMillis - gPreviousMillis) >= ONE_MINUTE) {
     reportVoltage();
     gPreviousMillis = currentMillis;
-    unsigned long voltage_mesure = getVoltage(SENSOR_PIN_1);
-    if (voltage_mesure < 100) {
+    unsigned long avg_voltage = computeAvgVoltage();
+    if (avg_voltage < 100) {
       Serial.println("Arret de la decharge profonde");
       setRegenBoxMode(RBX_MODE_IDLE);
     }
