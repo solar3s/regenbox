@@ -17,6 +17,7 @@
 #define DEAD_THRESHOLD          688      // Seuil de mort de la pile pour l'arret des cycles de charge/decharge
 #define OFFICIAL_TEST
 //#define MULTIPLE_SENSORS
+#define VOLTAGE_HISTORY_NUM       5      // Nombre d'echantillons sauvegardés dans l'historique
 
 enum RBX_STATUS {
   RBX_STATUS_IDLE     = 0,
@@ -40,6 +41,8 @@ byte gNb_cycle                = 0;     //compteur du nombre de cycle de charge/d
 byte gHeure                   = 0;
 boolean gTerminal_actif       = false; // True: arduino en connexion avec le PC, FALSE: arduino non connecté avec le PC(exemple sur alim secteur)
 unsigned long gPreviousMillis = 0;
+unsigned long gVoltageHist[VOLTAGE_HISTORY_NUM];         // Historique des mesures de tensions
+unsigned long gHistIndex = 0;          // Index de l'historique
 
 //-----------------------------------------------------------------------------
 //--------- Mesure de la tension dans l'emplacement 1 
@@ -51,7 +54,7 @@ unsigned long gPreviousMillis = 0;
 // à peu prêt constante
 //-----------------------------------------------------------------------------
 unsigned long getVoltage(byte sensor_pin) {
-unsigned long voltage_mesure = analogRead(sensor_pin);
+  unsigned long voltage_mesure = analogRead(sensor_pin);
   for (byte i = 0; i < NB_ANALOG_RD; i++) {
     voltage_mesure = voltage_mesure + analogRead(sensor_pin);
     delay(1);
@@ -67,6 +70,7 @@ unsigned long voltage_mesure = analogRead(sensor_pin);
 //-----------------------------------------------------------------------------
 void reportVoltage() {
   unsigned long voltage_mesure = getVoltage(SENSOR_PIN_1);
+  gVoltageHist[gHistIndex % VOLTAGE_HISTORY_NUM] = voltage_mesure;
 #ifndef OFFICIAL_TEST
   Serial.print("Tension pile emplacement 1 : ");
 #endif 
@@ -83,6 +87,23 @@ void reportVoltage() {
   Serial.println(voltage_mesure);
   //Serial.println("mV;");
 #endif // MULTIPLE_SENSOR
+}
+
+//-----------------------------------------------------------------------------
+//- Initialisation de l'historique des mesures de tension
+//-----------------------------------------------------------------------------
+void initVoltageHist() {
+  if (gStatus == RBX_STATUS_CHARGE) {
+    for (byte i = 0; i < VOLTAGE_HISTORY_NUM; i++) {
+      gVoltageHist[i] = DECHARGE_THRESHOLD;
+    }
+  }
+  else if (gStatus == RBX_STATUS_DECHARGE) {
+    for (byte i = 0; i < VOLTAGE_HISTORY_NUM; i++) {
+      gVoltageHist[i] = CHARGE_THRESHOLD;
+    }
+  }
+  gHistIndex = 0;
 }
 
 //----------------------------------------------------------
@@ -106,6 +127,7 @@ void setRegenBoxStatus(RBX_STATUS status) {
     digitalWrite(CHARGE_PIN,   HIGH);   // desactivation de la charge
     digitalWrite(DECHARGE_PIN, LOW);    // desactivation de la decharge
   }
+  initVoltageHist();
 }
 
 //-------------------------------------------------------------
