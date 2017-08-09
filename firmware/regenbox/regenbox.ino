@@ -98,6 +98,7 @@ unsigned long computeAvgVoltage() {
 void reportVoltage() {
   unsigned long voltage_mesure = getVoltage(SENSOR_PIN_1);
   gVoltageHist[gHistIndex % VOLTAGE_HISTORY_NUM] = voltage_mesure;
+  gHistIndex++;
 #ifndef OFFICIAL_TEST
   Serial.print("Tension pile emplacement 1 : ");
 #endif 
