@@ -197,7 +197,7 @@ void usage() {
     Serial.println("          1 : Lancement des cycles decharge/charge;");
     Serial.println("          2 : Mesure tension pile emplacement 1;");
     Serial.println("          3 : Lancement des cycles charge/decharge;");
-    Serial.println("          4 : Charge des piles sur les quatre emplacements (sans collecte des données);");
+    Serial.println("          4 : Charge des piles sur les quatre emplacements;");
     Serial.println("          5 : Lancement Decharge profonde (jusqu'a la mort de la pile);");
     Serial.println("");
   }
