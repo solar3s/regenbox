@@ -15,8 +15,8 @@
 #define CHARGE_THRESHOLD       1500      // Seuil limite de charge de la pile
 #define DECHARGE_THRESHOLD      900      // Seuil de decharge
 #define DEAD_THRESHOLD          688      // Seuil de mort de la pile pour l'arret des cycles de charge/decharge
-#define OFFICIAL_TEST
-//#define MULTIPLE_SENSORS
+#define OFFICIAL_TEST                    // Commenter pour obtenir plus d'informations dans la console
+//#define MULTIPLE_SENSORS               // Decommenter pour mesurer la tension sur tous les emplacements (nécessite une modification électromique)
 #define VOLTAGE_HISTORY_NUM       5      // Nombre d'echantillons sauvegardés dans l'historique
 
 enum RBX_STATUS {
@@ -101,11 +101,11 @@ void reportVoltage() {
   gHistIndex++;
 #ifndef OFFICIAL_TEST
   Serial.print("Tension pile emplacement 1 : ");
-#endif 
-  Serial.println(voltage_mesure);
   Serial.print("Avg : ");
   unsigned long avgV = computeAvgVoltage();
   Serial.println(avgV);
+#endif 
+  Serial.println(voltage_mesure);
 #ifdef MULTIPLE_SENSORS
   voltage_mesure = getVoltage(SENSOR_PIN_2);
   Serial.print("Tension pile emplacement 2 : "); 
@@ -191,7 +191,6 @@ void usage() {
   if (Serial.available()) {
     Serial.read();
     gTerminal_actif = true;
-    //Serial.println("Demarrage");
     /****MENU****/
     Serial.println("AVIS AUX BETA-TESTEURS : Ne pas interrompre les tests pour préserver l'intégralité et la fiabilité des données");
     Serial.println("      Toutes les mesures sont données ici en mV et représentent la tension aux bornes de la pile +/- 3mV\n");
