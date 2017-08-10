@@ -17,6 +17,7 @@
 #define DEAD_THRESHOLD          688      // Seuil de mort de la pile pour l'arret des cycles de charge/decharge
 #define OFFICIAL_TEST                    // Commenter pour obtenir plus d'informations dans la console
 //#define MULTIPLE_SENSORS               // Decommenter pour mesurer la tension sur tous les emplacements (nécessite une modification électromique)
+#define COMPLETE_CHARGE_THRESHOLD 1650
 #define VOLTAGE_HISTORY_NUM       5      // Nombre d'echantillons sauvegardés dans l'historique
 
 enum RBX_STATUS {
@@ -116,7 +117,7 @@ void reportVoltage() {
   voltage_mesure = getVoltage(SENSOR_PIN_4);
   Serial.print("Tension pile emplacement 4 : "); 
   Serial.println(voltage_mesure);
-  //Serial.println("mV;");
+  Serial.println("mV;");
 #endif // MULTIPLE_SENSOR
 }
 
@@ -268,8 +269,34 @@ void modeCharge() {
   if ((currentMillis - gPreviousMillis) >= ONE_MINUTE) {
    reportVoltage();
    gPreviousMillis = currentMillis;
-   // TODO : Define the strategy to stop charge !
   }
+  
+  unsigned long voltage = getVoltage(SENSOR_PIN_1);
+  if (voltage >= COMPLETE_CHARGE_THRESHOLD) {
+    Serial.println("Fin de la charge");
+    setRegenBoxMode(RBX_MODE_IDLE);
+  }
+#ifndef OFFICIAL_TEST
+#ifdef MULTIPLE_SENSORS
+  unsigned long voltage2 = getVoltage(SENSOR_PIN_2);
+  if (voltage2 >= COMPLETE_CHARGE_THRESHOLD) {
+    Serial.println("Fin de la charge");
+    setRegenBoxMode(RBX_MODE_IDLE);
+  }
+
+//  unsigned long voltage3 = getVoltage(SENSOR_PIN_3);
+//  if (voltage3 >= COMPLETE_CHARGE_THRESHOLD) {
+//    Serial.println("Fin de la charge");
+//    setRegenBoxMode(RBX_MODE_IDLE);
+//  }
+//
+//  unsigned long voltage4 = getVoltage(SENSOR_PIN_4);
+//  if (voltage4 >= COMPLETE_CHARGE_THRESHOLD) {
+//    Serial.println("Fin de la charge");
+//    setRegenBoxMode(RBX_MODE_IDLE);
+//  }
+#endif // MULTIPLE_SENSORS
+#endif // OFFICIAL_TEST
 }
 
 //-----------------------------------------------------------------------------
@@ -360,3 +387,4 @@ void loop() {
         readInput();
     }
 }
+
