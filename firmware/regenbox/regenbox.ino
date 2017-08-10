@@ -111,13 +111,13 @@ void reportVoltage() {
   voltage_mesure = getVoltage(SENSOR_PIN_2);
   Serial.print("Tension pile emplacement 2 : "); 
   Serial.println(voltage_mesure);
-  //voltage_mesure = getVoltage(SENSOR_PIN_3);
-  //Serial.print("Tension pile emplacement 3 : "); 
-  //Serial.println(voltage_mesure);
-  //voltage_mesure = getVoltage(SENSOR_PIN_4);
-  //Serial.print("Tension pile emplacement 4 : "); 
-  //Serial.println(voltage_mesure);
-  //Serial.println("mV;");
+  voltage_mesure = getVoltage(SENSOR_PIN_3);
+  Serial.print("Tension pile emplacement 3 : "); 
+  Serial.println(voltage_mesure);
+  voltage_mesure = getVoltage(SENSOR_PIN_4);
+  Serial.print("Tension pile emplacement 4 : "); 
+  Serial.println(voltage_mesure);
+  Serial.println("mV;");
 #endif // MULTIPLE_SENSOR
 }
 
