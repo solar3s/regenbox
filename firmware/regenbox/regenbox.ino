@@ -269,14 +269,15 @@ void modeCharge() {
   if ((currentMillis - gPreviousMillis) >= ONE_MINUTE) {
    reportVoltage();
    gPreviousMillis = currentMillis;
-   // TODO : Define the strategy to stop charge !
   }
+  
   unsigned long voltage = getVoltage(SENSOR_PIN_1);
   if (voltage >= COMPLETE_CHARGE_THRESHOLD) {
     Serial.println("Fin de la charge");
     setRegenBoxMode(RBX_MODE_IDLE);
   }
 #ifndef OFFICIAL_TEST
+#ifdef MULTIPLE_SENSORS
   unsigned long voltage2 = getVoltage(SENSOR_PIN_2);
   if (voltage2 >= COMPLETE_CHARGE_THRESHOLD) {
     Serial.println("Fin de la charge");
@@ -294,7 +295,8 @@ void modeCharge() {
 //    Serial.println("Fin de la charge");
 //    setRegenBoxMode(RBX_MODE_IDLE);
 //  }
-#endif
+#endif // MULTIPLE_SENSORS
+#endif // OFFICIAL_TEST
 }
 
 //-----------------------------------------------------------------------------
